@@ -1,8 +1,8 @@
 ﻿<#
     .NOTES
         Author: Mark McGill, VMware
-        Last Edit: 2/2/2021
-        Version 3.0.0
+        Last Edit: 2/3/2021
+        Version 3.0.1
     .SYNOPSIS
         Calculates the optimal vCPU (sockets & cores) based on the current VM and Host architecture
     .DESCRIPTION
@@ -12,21 +12,24 @@
         If no -vmName is specified, Get-OptimalvCPU will get all VMs from connected vCenters
         Only the VM information will be returned unless the -full option is specified
     .EXAMPLE
-        Get-OptimalvCPU       #Gets all VMs from currently connected vCenters
+        Get-OptimalvCPU    #Gets all VMs from currently connected vCenters
     .EXAMPLE
-        Get-OptimalvCPU | Export-CSV -path "c:\temp\vNUMA.csv" -NoTypeInformation
+        Get-OptimalvCPU | Export-CSV -path "c:\temp\vNUMA.csv" -NoTypeInformation    #Exports results to csv
+        Get-OptimalvCPU | Out-GridView    #Opens results in a grid window - Windows OS only
     .EXAMPLE
-        Get-OptimalvCPU -vmName "MyVmName"
+        Get-OptimalvCPU -vmName "MyVmName"   #Gets results on only the VM named "MyVmName"
     .EXAMPLE
-        Get-OptimalvCPU -vmName (Get-VM -Name "*NY-DC*")
+        Get-OptimalvCPU -vmName (Get-VM -Name "*NY-DC*")    #Gets results on any VM with "NY-DC" in its name
     .EXAMPLE
-        Get-OptimalvCPU -full   #Returns all vCenter, Cluster, and VMHost information
+        Get-OptimalvCPU -full    #Returns all vCenter, Cluster, and VMHost information
+   .EXAMPLE
+        Get-OptimalvCPU -tdmJsonFile <FilePath>    #Generates report based on VMware TAM TDM reports in JSON format    
     .OUTPUTS
         Object containing vCenter,Cluster,Host and VM information, as well as optimal vCPU recommendations
 #>
 function Get-OptimalvCPU
 {
-    #Requires -Version 5.1
+    #Requires -Version 5.0
     #Requires -Modules @{ModuleName="VMware.PowerCLI"; ModuleVersion="11.0.0.10380590"}
     [cmdletbinding()]
     Param
