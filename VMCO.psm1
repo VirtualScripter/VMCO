@@ -79,6 +79,8 @@ function Get-OptimalvCPU
             {
                 foreach ($name in $VMName)
                 {
+                    #escapes parentheses in VM name (ie, Tanzu VMs)
+                    $name = ($name.Replace('(','\(')).Replace(')','\)')
                     $nameFilter += "^$($name)$|"
                 }
                 $nameFilter = $nameFilter.TrimEnd("|")
