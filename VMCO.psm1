@@ -1,8 +1,8 @@
 ﻿<#
     .NOTES
         Author: Mark McGill, VMware
-        Last Edit: 2/3/2021
-        Version 3.0.0.2
+        Last Edit: 2/5/2021
+        Version 3.0.0.3
     .SYNOPSIS
         Calculates the optimal vCPU (sockets & cores) based on the current VM and Host architecture
     .DESCRIPTION
@@ -30,7 +30,7 @@
 function Get-OptimalvCPU
 {
     #Requires -Version 5.0
-    #Requires -Modules @{ModuleName="VMware.PowerCLI"; ModuleVersion="11.0.0.10380590"}
+    #Requires -Modules @{ModuleName="VMware.VimAutomation.Core"; ModuleVersion="11.0.0.10336080"}
     [cmdletbinding()]
     Param
     (

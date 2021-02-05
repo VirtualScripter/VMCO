@@ -92,3 +92,8 @@ CHANGE LOG
 2-5-2021
 v3.0.0.2
 Added escape for parentheses in VM Names (ie, Tanzu VMs) so they will show up in Get-View Filters by VMName
+
+2-5-2021
+v3.0.0.3
+Removed requirement for VMware.PowerCLI due to error re: HorizonView module not supported in Powershell Core
+Added Vim.Automation.Core as requirement
