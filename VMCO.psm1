@@ -2,7 +2,7 @@
     .NOTES
         Author: Mark McGill, VMware
         Last Edit: 2/3/2021
-        Version 3.0.1
+        Version 3.0.0.2
     .SYNOPSIS
         Calculates the optimal vCPU (sockets & cores) based on the current VM and Host architecture
     .DESCRIPTION

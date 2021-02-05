@@ -85,3 +85,10 @@ Get-OptimalvCPU brm-vra-app01 -full
     OptimalCoresPerSocket    : 6
     Priority                 : HIGH
     Details                  : VM CPU spans pNUMA nodes and should be distributed evenly across as few as possible | Consider changing the host Power Policy to "High Performance" for hosts with VMs larger than 8 vCPUs
+
+========================================
+CHANGE LOG
+
+2-5-2021
+v3.0.0.2
+Added escape for parentheses in VM Names (ie, Tanzu VMs) so they will show up in Get-View Filters by VMName
