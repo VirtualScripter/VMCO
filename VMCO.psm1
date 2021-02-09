@@ -1,8 +1,8 @@
 ﻿<#
     .NOTES
         Author: Mark McGill, VMware
-        Last Edit: 2/5/2021
-        Version 3.0.0.3
+        Last Edit: 2/8/2021
+        Version 3.0.0.4
     .SYNOPSIS
         Calculates the optimal vCPU (sockets & cores) based on the current VM and Host architecture
     .DESCRIPTION
@@ -76,6 +76,13 @@ function Get-OptimalvCPU
         {
             If ($VMName -ne $null)
             {
+                Switch($vmName.GetType().Name)
+                {
+                    "Object[]" {$vmName = $vmName.Name}
+                    "UniversalVirtualMachineImpl" {$vmName = $vmName.Name}
+                    "String" {}
+                    Default {Throw "Unrecognized Input for VM"}
+                }
                 foreach ($name in $VMName)
                 {
                     #escapes parentheses in VM name (ie, Tanzu VMs)
@@ -227,7 +234,7 @@ function Get-OptimalvCPU
                 Throw "Cannot find TDM JSON File: $tdmJsonFile"    
             }
         }
-        #if no TMD file is specified
+        #if no TDM file is specified
         else 
         {
             $vSphereData = Get-vSphereInfo($vmName)

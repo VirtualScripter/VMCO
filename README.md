@@ -96,3 +96,7 @@ Added escape for parentheses in VM Names (ie, Tanzu VMs) so they will show up in
 2-5-2021
 v3.0.0.3
 Removed requirement for VMware.PowerCLI due to error re: HorizonView module not supported in Powershell Core
+
+2-5-2021
+v3.0.0.4
+Modified Get-vSphereInfo so it checks the VMName type and if Object or UniversalVirtualMachineImpl it selects just the name
