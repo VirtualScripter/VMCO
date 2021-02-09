@@ -30,7 +30,6 @@
 function Get-OptimalvCPU
 {
     #Requires -Version 5.0
-    #Requires -Modules @{ModuleName="VMware.VimAutomation.Core"; ModuleVersion="11.0.0.10336080"}
     [cmdletbinding()]
     Param
     (
