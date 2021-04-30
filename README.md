@@ -100,3 +100,7 @@ Removed requirement for VMware.PowerCLI due to error re: HorizonView module not 
 2-5-2021
 v3.0.0.4
 Modified Get-vSphereInfo so it checks the VMName type and if Object or UniversalVirtualMachineImpl it selects just the name
+
+4-30-2021
+v3.0.0.5
+Minor grammar corrections
