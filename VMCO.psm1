@@ -1,8 +1,8 @@
 ﻿<#
     .NOTES
         Author: Mark McGill, VMware
-        Last Edit: 2/8/2021
-        Version 3.0.0.4
+        Last Edit: 4/30/2021
+        Version 3.0.0.5
     .SYNOPSIS
         Calculates the optimal vCPU (sockets & cores) based on the current VM and Host architecture
     .DESCRIPTION
@@ -15,7 +15,8 @@
         Get-OptimalvCPU    #Gets all VMs from currently connected vCenters
     .EXAMPLE
         Get-OptimalvCPU | Export-CSV -path "c:\temp\vNUMA.csv" -NoTypeInformation    #Exports results to csv
-        Get-OptimalvCPU | Out-GridView    #Opens results in a grid window - Windows OS only
+    .EXAMPLE
+        Get-OptimalvCPU | Out-GridView    #Opens results in a grid window - Windows OS only    
     .EXAMPLE
         Get-OptimalvCPU -vmName "MyVmName"   #Gets results on only the VM named "MyVmName"
     .EXAMPLE
