@@ -104,3 +104,9 @@ Modified Get-vSphereInfo so it checks the VMName type and if Object or Universal
 4-30-2021
 v3.0.0.5
 Minor grammar corrections
+
+11-22-2021
+v3.1.0.0
+Corrected output for inconsistent HW in a cluster - was not reporting for every VM in an inconsistent cluster
+Added a [math]:Round to VMHost memory calculation to correct when reported host memory is slightly lower than actual
+Added error handling for situations when host a VM is running on is not accessible or access denied is returned

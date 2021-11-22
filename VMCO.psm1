@@ -1,8 +1,8 @@
 ﻿<#
     .NOTES
         Author: Mark McGill, VMware
-        Last Edit: 4/30/2021
-        Version 3.0.0.5
+        Last Edit: 11/22/2021
+        Version 3.1.0.0
     .SYNOPSIS
         Calculates the optimal vCPU (sockets & cores) based on the current VM and Host architecture
     .DESCRIPTION
@@ -107,16 +107,16 @@ function Get-OptimalvCPU
             If ($VMName -ne $null)
             {
                 $hostsUnique = $vms | Select @{n="Id";e={"HostSystem-" + "$($_.HostId)"}},vCenter | Sort-Object -Property @{e="Id"},@{e="vCenter"} -Unique
-                $hostCommand = {get-view -Id $($hostsUnique.Id) -Property Name,Parent,Config.Product.Version,Config.HyperThread,Hardware.MemorySize,Hardware.CpuInfo,Config.PowerSystemInfo.CurrentPolicy.Key,Config.Option}
+                $hostCommand = {get-view -Id $($hostsUnique.Id) -Property Name,Parent,Config.Product.Version,Config.HyperThread,Hardware.MemorySize,Hardware.CpuInfo,Config.PowerSystemInfo.CurrentPolicy.Key,Config.Option -ErrorAction SilentlyContinue}
             }
             Else
             {
-                $hostCommand = {get-view -ViewType HostSystem -Filter $hostFilter -Property Name,Parent,Config.Product.Version,Config.HyperThread,Hardware.MemorySize,Hardware.CpuInfo,Config.PowerSystemInfo.CurrentPolicy.Key,Config.Option}
+                $hostCommand = {get-view -ViewType HostSystem -Filter $hostFilter -Property Name,Parent,Config.Product.Version,Config.HyperThread,Hardware.MemorySize,Hardware.CpuInfo,Config.PowerSystemInfo.CurrentPolicy.Key,Config.Option -ErrorAction SilentlyContinue}
             }
         
             $vmHosts = Invoke-Command $hostCommand | select Name,@{n='Id';e={$_.MoRef.Value}},@{n='Version';e={$_.Config.Product.Version}},@{n='vCenter';e={([uri]$_.Client.serviceurl).Host}},@{n="ClusterId";
-                e={$_.Parent | Where{$_.Type -eq "ClusterComputeResource"} | select -expand Value}},@{n='MemoryGB';e={[int](($_.Hardware.MemorySize)/1073741824)}},@{n="MemPerChannel";
-                e={[int](($_.Hardware.MemorySize)/1073741824) / ($_.Hardware.CpuInfo.NumCpuPackages)}},@{n='Sockets';e={($_.Hardware.CpuInfo.NumCpuPackages)}},@{n='CoresPerSocket';
+                e={$_.Parent | Where{$_.Type -eq "ClusterComputeResource"} | select -expand Value}},@{n='MemoryGB';e={[math]::Round([int](($_.Hardware.MemorySize)/1073741824))}},@{n="MemPerChannel";
+                e={[math]::Round([int](($_.Hardware.MemorySize)/1073741824)) / ($_.Hardware.CpuInfo.NumCpuPackages)}},@{n='Sockets';e={($_.Hardware.CpuInfo.NumCpuPackages)}},@{n='CoresPerSocket';
                 e={($_.Hardware.CpuInfo.NumCPUCores)/$($_.Hardware.CpuInfo.NumCpuPackages)}},@{n='CPUs';e={$_.Hardware.CpuInfo.NumCPUCores}},@{n='CpuThreads';e={($_.Hardware.CpuInfo.NumCpuThreads)}},@{n='HTActive';
                 e={$_.Config.HyperThread.Active}},@{n='NumaVcpuMin'; e={$_.Config.Option | where {$_.Key -eq "numa.vcpu.min"}}},@{n='PowerPolicy'; 
                 e={
@@ -135,15 +135,28 @@ function Get-OptimalvCPU
             #accounts for hosts with no cluster
             If ($clustersUnique -ne $Null)
             {
+                #CHANGED HERE
                 $clusters = get-view -Id $($clustersUnique.Id) -Property Name,Configuration.DrsConfig | Select Name,@{n="Id";e={$_.MoRef.Value}},@{n="vCenter"; e={([uri]$_.Client.serviceurl).Host}},@{n="DRSEnabled"; 
-                    e={$_.Configuration.DrsConfig.Enabled}},MinMemoryGB,MinSockets,MinCoresPerSocket -ErrorAction Stop
-     
+                    e={$_.Configuration.DrsConfig.Enabled}},MinMemoryGB,MinSockets,MinCoresPerSocket,Inconsistent -ErrorAction Stop
+
                 foreach ($cluster in $clusters)
                 {
                     $clusterHosts = $vmHosts | Where{($_.vCenter -eq $cluster.vCenter) -and $_.clusterID -eq $cluster.Id} | select Name,Id,MemoryGB,Sockets,CoresPerSocket
                     $cluster.MinMemoryGB = ($clusterHosts.MemoryGB | measure -Minimum).Minimum
                     $cluster.MinSockets = ($clusterHosts.Sockets | measure -Minimum).Minimum
                     $cluster.MinCoresPerSocket = ($clusterHosts.CoresPerSocket | measure -Minimum).Minimum
+                    $uniqueHostsMemoryGB = ($clusterHosts.MemoryGB | Select -Unique).Count
+                    $uniqueHostsSockets = ($clusterHosts.Sockets | Select -Unique).Count
+                    $uniqueHostsCoresPerSocket = ($clusterHosts.CoresPerSocket | Select -Unique).Count
+                    If ($uniqueHostsMemoryGB -gt 1 -or $uniqueHostsSockets -gt 1 -or $uniqueHostsCoresPerSocket -gt 1)
+                    {
+                        $cluster.Inconsistent = $true
+                    }
+                    else 
+                    {
+                        $cluster.Inconsistent = $false
+                    }
+                    #CHANGED HERE
                 }
             }
 
@@ -187,18 +200,29 @@ function Get-OptimalvCPU
             Until($success)
 
             Write-Host "Collecting Host Information..." -ForegroundColor Green
-            $vmHosts = $json.hosts | select Name, @{n="Id";e={$_.mobId}},Version,vCenter,@{n="ClusterName"; e={$_.Cluster}},ClusterId, @{n='MemoryGB'; 
-                e={[int](($_.ram)/1073741824)}},@{n="MemPerChannel";e={([int](($_.ram)/1073741824))/$_.cpus}},@{n="Sockets";e={$_.cpus}},@{n="CoresPerSocket"; e={$_.cores / $_.cpus}}, cpus, @{n="CpuThreads"; e={$_.Threads}},@{n="HTActive"; 
+            $vmHosts = $json.hosts | select Name, @{n="Id";e={$_.mobId}},Version,vCenter,@{n="ClusterName"; e={$_.Cluster}},ClusterId, @{n='MemoryGB'; e={[math]::Round([int](($_.ram)/1073741824))}},@{n="MemPerChannel";
+                e={[math]::Round([int]((($_.ram)/1073741824)/$_.cpus))}},@{n="Sockets";e={$_.cpus}},@{n="CoresPerSocket"; e={$_.cores / $_.cpus}}, cpus, @{n="CpuThreads"; e={$_.Threads}},@{n="HTActive"; 
                 e={if($_.Threads -gt $_.cores){$true}Else{$false}}}, NumaVcpuMin, @{n="PowerPolicy";e={"N/A"}}
 
             Write-Host "Collecting vCenter and Cluster information and calculating cluster minimums..." -ForegroundColor Green
-            $clusters = $vmHosts | Select @{n="Name"; e={$_.clusterName}},@{n="Id"; e={$_.ClusterId}},@{n="DRSEnabled"; e={"N/A"}},vCenter,MinMemoryGB,MinSockets,MinCoresPerSocket | Where{$_.cluster -ne "n/a"} | Sort-Object -Property @{e="Id"},@{e="vCenter"} -Unique
+            $clusters = $vmHosts | Select @{n="Name"; e={$_.clusterName}},@{n="Id"; e={$_.ClusterId}},@{n="DRSEnabled"; e={"N/A"}},vCenter,MinMemoryGB,MinSockets,MinCoresPerSocket,Inconsistent | Where{$_.cluster -ne "n/a"} | Sort-Object -Property @{e="Id"},@{e="vCenter"} -Unique
             foreach ($cluster in $clusters)
             {
                 $clusterHosts = $vmHosts | Where{($_.vCenter -eq $cluster.vCenter) -and ($_.clusterID -eq $cluster.Id)} | select Name,Id,MemoryGB,Sockets,CoresperSocket
                 $cluster.MinMemoryGB = ($clusterHosts.MemoryGB | measure -Minimum).Minimum
                 $cluster.MinSockets = ($clusterHosts.Sockets | measure -Minimum).Minimum
                 $cluster.MinCoresPerSocket = ($clusterHosts.CoresPerSocket | measure -Minimum).Minimum
+                $uniqueHostsMemoryGB = ($clusterHosts.MemoryGB | Select -Unique).Count
+                $uniqueHostsSockets = ($clusterHosts.Sockets | Select -Unique).Count
+                $uniqueHostsCoresPerSocket = ($clusterHosts.CoresPerSocket | Select -Unique).Count
+                If ($uniqueHostsMemoryGB -gt 1 -or $uniqueHostsSockets -gt 1 -or $uniqueHostsCoresPerSocket -gt 1)
+                {
+                    $cluster.Inconsistent = $true
+                }
+                else 
+                {
+                    $cluster.Inconsistent = $false
+                }
             }
         
             Write-Host "Processing Virtual Machine Information..." -ForegroundColor Green
@@ -274,6 +298,11 @@ function Get-OptimalvCPU
             $pNumaNotExp = $null
 
             $vmHost = $vmHosts | where {$($_.vCenter) -eq $($vm.vCenter) -and $($_.Id) -eq $($vm.HostId)} | select -first 1
+            #account for error retrieving VM's host information
+            If ($vmHost -eq $null)
+            {
+                Throw "Could not find VMHost $($vm.HostId) for VM $($vm.Name)"
+            }
 
             If ($vmHost.ClusterId -eq $null -or $vmHost.ClusterId -eq "n/a")
             {
@@ -286,9 +315,10 @@ function Get-OptimalvCPU
             }
             Else
             {
-                $cluster = $clusters | Where{($($_.Id) -eq $($vmHost.ClusterId)) -and ($($_.vCenter) -eq $($vmHost.vCenter))} | Select Name,DRSEnabled,MinMemoryGB,MinSockets,MinCoresPerSocket | Select -first 1
+                #CHANGED HERE
+                $cluster = $clusters | Where{($($_.Id) -eq $($vmHost.ClusterId)) -and ($($_.vCenter) -eq $($vmHost.vCenter))} | Select Name,DRSEnabled,MinMemoryGB,MinSockets,MinCoresPerSocket,Inconsistent | Select -first 1
                 #flags if hosts in a cluster are of different size memory or CPU
-                If (($vmHost.MemoryGB -ne $cluster.MinMemoryGB -or $vmHost.Sockets -ne $cluster.MinSockets -or $vmHost.CoresPerSocket -ne $cluster.MinCoresPerSocket) -and $cluster.MinMemoryGB -ne "")
+                If ($cluster.Inconsistent)
                 {
                     $clusterMemPerChannel = $cluster.MinMemoryGB / $cluster.MinSockets
                     $clusterCPUs = $cluster.MinSockets * $cluster.MinCoresPerSocket
@@ -547,7 +577,7 @@ function Get-OptimalvCPU
         Catch
         {
             Write-Error "Error calculating optimal CPU for $($vm.Name): $($_.Exception.Message)"
-            break
+            #break
         }
     }#end foreach ($vm in $vms)
     Write-Progress -Activity "Calculating Optimum vCPU Config for VMs" -Completed
